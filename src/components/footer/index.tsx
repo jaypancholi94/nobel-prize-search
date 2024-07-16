@@ -24,7 +24,7 @@ export const Footer = () => {
 
   const parsedIntPagination = parseInt(pagination);
   return (
-    <div className="fixed bottom-0 bg-slate-50 w-full container flex py-4 justify-center">
+    <div className="fixed bottom-0 left-0 right-0 bg-slate-50 w-full flex py-4 justify-center">
       <Pagination>
         <PaginationContent>
           <PaginationItem>
