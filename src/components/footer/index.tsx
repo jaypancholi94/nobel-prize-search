@@ -17,9 +17,10 @@ export const Footer = () => {
     setPagination,
     loading,
     splittedNobelPrizesResult,
+    searchQuery,
     totalResults,
   } = useNobelPrize();
-  if (loading) return null;
+  if (loading || searchQuery === "" || totalResults.length === 0) return null;
 
   const parsedIntPagination = parseInt(pagination);
   return (
@@ -43,7 +44,7 @@ export const Footer = () => {
             const realIndex = index + 1;
 
             if (
-              (parsedIntPagination < 3 && realIndex <= 3) ||
+              (parsedIntPagination < 3 && realIndex < 2) ||
               (splittedNobelPrizesResult.length - 2 < parsedIntPagination &&
                 splittedNobelPrizesResult.length - 3 < realIndex)
             ) {
@@ -86,7 +87,6 @@ export const Footer = () => {
                   )}
                   <PaginationItem key={realIndex}>
                     <PaginationLink
-                      href="#"
                       isActive={parsedIntPagination === realIndex}
                       onClick={() => setPagination(realIndex.toString())}
                     >

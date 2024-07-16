@@ -1,20 +1,10 @@
 import { RANK } from "@/constants";
-import { PrizesProps } from "@/context/nobel-prize-context";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-export const seperateCategory = (nobelPrizes: PrizesProps[]) => {
-  let categories: string[] = [];
-  nobelPrizes.forEach((prize) => {
-    if (!categories.includes(prize.category))
-      categories = [...categories, prize.category];
-  });
-  return categories;
-};
 
 export const handleSearchParams = (
   searchParamValue: string,
@@ -27,7 +17,6 @@ export const handleSearchParams = (
   } else {
     params.delete(searchParamsKey);
   }
-
   return params.toString();
 };
 

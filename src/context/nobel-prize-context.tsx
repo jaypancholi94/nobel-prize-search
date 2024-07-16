@@ -1,10 +1,11 @@
 "use client";
 
-import { seperateCategory, handleSearchParams } from "@/lib/utils";
+import { handleSearchParams } from "@/lib/utils";
 import Fuse from "fuse.js";
 import { chunk } from "lodash";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { DEFAULT_FUZZY_OPTIONS } from "@/constants";
 
 import {
   createContext,
@@ -39,13 +40,10 @@ type NobelPrizesResultProps = {
 };
 type NobelPrizeContextProps = {
   nobelPrizes: PrizesProps[] | null;
-  categories: string[];
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   splittedNobelPrizesResult: NobelPrizesResultProps[][];
   setSplittedNobelPrizesResult: (result: NobelPrizesResultProps[][]) => void;
-  fuzzySearchOptions: FuzzOptionsProps;
-  setFuzzySearchOptions: (options: FuzzOptionsProps) => void;
   loading: boolean;
   currentPageResult: NobelPrizesResultProps[];
   pagination: string;
@@ -70,21 +68,6 @@ type fuzzySearchProps = {
 
 const NobelPrizeContext = createContext<NobelPrizeContextProps | null>(null);
 
-const DEFAULT_FUZZY_OPTIONS: FuzzOptionsProps = {
-  includeScore: true,
-  shouldSort: true,
-  includeMatches: true,
-  threshold: 0.5,
-  minMatchCharLength: 2,
-  keys: [
-    "year",
-    "category",
-    "laureates.firstname",
-    "laureates.surname",
-    "laureates.motivation",
-  ],
-};
-
 export const fuzzySearch = ({
   query,
   fuseOptions,
@@ -101,12 +84,11 @@ export const NobelPrizeProvider = ({ children }: NobelPrizeProviderProps) => {
   const { replace } = useRouter();
 
   const [nobelPrizes, setNobelPrizes] = useState<PrizesProps[] | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(
     searchParams.get("search") ?? "",
   );
   const [pagination, setPagination] = useState<string>(
-    searchParams.get("page") ?? "1",
+    searchParams.get("page") ?? "",
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [totalResults, setTotalResults] = useState<NobelPrizesResultProps[]>(
@@ -119,13 +101,10 @@ export const NobelPrizeProvider = ({ children }: NobelPrizeProviderProps) => {
     NobelPrizesResultProps[]
   >([]);
 
-  const [fuzzySearchOptions, setFuzzySearchOptions] =
-    useState<FuzzOptionsProps>(DEFAULT_FUZZY_OPTIONS);
-
   const handleFuzzySearch = (dataSet: PrizesProps[]) => {
     const result = fuzzySearch({
       query: searchQuery,
-      fuseOptions: fuzzySearchOptions,
+      fuseOptions: DEFAULT_FUZZY_OPTIONS,
       dataSet: dataSet,
     });
     setTotalResults(result as unknown as NobelPrizesResultProps[]);
@@ -135,14 +114,21 @@ export const NobelPrizeProvider = ({ children }: NobelPrizeProviderProps) => {
     );
     setLoading(false);
   };
+
   useEffect(() => {
-    const paginationIndex = parseInt(pagination);
-    setCurrentPageResult(
-      splittedNobelPrizesResult[paginationIndex ? paginationIndex - 1 : 0],
-    );
-    const params = handleSearchParams(pagination, searchParams, "page");
-    replace(`${pathname}?${params.toString()}`);
-  }, [splittedNobelPrizesResult, pagination]);
+    fetch("https://api.nobelprize.org/v1/prize.json")
+      .then((response) => response.json())
+      .then((data) => {
+        setNobelPrizes(data.prizes);
+        if (searchQuery) {
+          handleFuzzySearch(data.prizes);
+          setPagination(pagination);
+        }
+      });
+    if (searchQuery) {
+      setSearchQuery(searchQuery);
+    }
+  }, []);
 
   useEffect(() => {
     const params = handleSearchParams(searchQuery, searchParams, "search");
@@ -160,32 +146,22 @@ export const NobelPrizeProvider = ({ children }: NobelPrizeProviderProps) => {
   }, [searchQuery]);
 
   useEffect(() => {
-    fetch("https://api.nobelprize.org/v1/prize.json")
-      .then((response) => response.json())
-      .then((data) => {
-        setNobelPrizes(data.prizes);
-        setCategories(seperateCategory(data.prizes));
-        if (searchQuery) {
-          handleFuzzySearch(data.prizes);
-          setPagination(pagination);
-        }
-      });
-    if (searchQuery) {
-      setSearchQuery(searchQuery);
-    }
-  }, []);
+    const paginationIndex = parseInt(pagination);
+    setCurrentPageResult(
+      splittedNobelPrizesResult[paginationIndex ? paginationIndex - 1 : 0],
+    );
+    const params = handleSearchParams(pagination, searchParams, "page");
+    replace(`${pathname}?${params.toString()}`);
+  }, [splittedNobelPrizesResult, pagination]);
 
   return (
     <NobelPrizeContext.Provider
       value={{
         nobelPrizes,
-        categories,
         searchQuery,
         setSearchQuery,
         splittedNobelPrizesResult,
         setSplittedNobelPrizesResult,
-        fuzzySearchOptions,
-        setFuzzySearchOptions,
         loading,
         currentPageResult,
         pagination,
